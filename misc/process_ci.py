@@ -69,6 +69,7 @@ def add_song(rhy_index, author_index, title, song_index, cons, depth):
     counter = 0
     song_phrases = []
     for con in cons:
+        print(con)
         phrases = process_con(con, depth=depth)
         for item in phrases:
             phrase_dict = {
@@ -84,6 +85,7 @@ def add_song(rhy_index, author_index, title, song_index, cons, depth):
             }
             song_phrases.append(phrase_dict)
         counter += 1
+    input()
     return song_phrases
 
 
@@ -99,7 +101,7 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
         rhythmic_frame = pd.DataFrame(columns=['name'])
 
     counter = 0
-    for file in os.listdir('../data/ci')[:2]:
+    for file in os.listdir('../data/ci'):
         if 'ci.song' not in file:
             continue
         print(f'Processing {file}')
@@ -109,9 +111,13 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
             author = ci['author']
             rhy_index = get_index(rhythmic_frame, rhy)
             author_index = get_index(author_frame, author)
-            paragraphs = extract_paragraphs(ci['paragraphs'])
-            database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], depth=depth)
-            counter += 1
+            try:
+                paragraphs = extract_paragraphs(ci['paragraphs'])
+                database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], depth=depth)
+                counter += 1
+            except:
+                print('An error occurred!')
+                continue
 
     database = pd.DataFrame(database, columns=['phrase', 'type', 'is_begin_in_sentence', 'is_end_in_sentence',
                                                'sentence_position_in_song', 'rhy_index',
