@@ -8,7 +8,7 @@ from transformers import BertConfig
 class ModelConfig:
 
     def __init__(self):
-        self.project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
         # ========== wike2 数据集相关配置
         # self.dataset_dir = os.path.join(self.project_dir, 'data', 'WikiText')
@@ -19,12 +19,13 @@ class ModelConfig:
         # self.data_name = 'wiki2'
 
         # ========== songci 数据集相关配置
-        self.dataset_dir = os.path.join(self.project_dir, 'data', 'SongCi')
-        self.pretrained_model_dir = os.path.join(self.project_dir, "bert_base_chinese")
+        self.dataset_dir = os.path.join(self.project_dir, 'data', 'phrase_database_d0_drop_dup.csv')
+        # self.pretrained_model_dir = os.path.join(self.project_dir, "bert_base_chinese")
+        self.pretrained_model_dir = os.path.join(self.project_dir, 'data', 'bert_base_chinese')
         self.train_file_path = os.path.join(self.dataset_dir, 'songci.train.txt')
         self.val_file_path = os.path.join(self.dataset_dir, 'songci.valid.txt')
         self.test_file_path = os.path.join(self.dataset_dir, 'songci.test.txt')
-        self.data_name = 'songci'
+        self.data_name = 'ci'
 
         # 如果需要切换数据集，只需要更改上面的配置即可
         self.vocab_path = os.path.join(self.pretrained_model_dir, 'vocab.txt')
@@ -32,11 +33,12 @@ class ModelConfig:
         self.model_save_dir = os.path.join(self.project_dir, 'cache')
         self.logs_save_dir = os.path.join(self.project_dir, 'logs')
         self.model_save_path = os.path.join(self.model_save_dir, f'model_{self.data_name}.bin')
-        self.writer = SummaryWriter(f"runs/{self.data_name}")
+        self.writer = SummaryWriter(os.path.join(self.project_dir, 'runs', self.data_name))
         self.is_sample_shuffle = True
         self.use_embedding_weight = True
-        self.batch_size = 16
+        self.batch_size = 32
         self.max_sen_len = None  # 为None时则采用每个batch中最长的样本对该batch中的样本进行padding
+        self.max_position_embeddings = 512
         self.pad_index = 0
         self.random_state = 2022
         self.learning_rate = 4e-5
@@ -46,6 +48,8 @@ class ModelConfig:
         self.masked_token_unchanged_rate = 0.5
         self.use_torch_multi_head = False  # False表示使用model/BasicBert/MyTransformer中的多头实现
         self.epochs = 200
+        self.validation_set_portion = 0.1
+        self.test_set_portion = 0.1
         self.model_val_per_epoch = 1
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)

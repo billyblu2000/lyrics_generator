@@ -1,5 +1,7 @@
 import os
+import random
 
+import numpy as np
 import torch
 
 
@@ -95,3 +97,9 @@ def cache(func):
         return data
 
     return wrapper
+
+
+def random_init(config):
+    random.seed(config.random_state)
+    torch.random.manual_seed(config.random_state)
+    np.random.seed(config.random_state)
