@@ -41,6 +41,11 @@ class SentenceTransformersRetriever:
         return self.phrase_database.loc[[i in selected_index for i in range(len(self.phrase_database))]]
 
     def __sample_from_sorted_retrieve(self, lst):
+        """
+
+        :param lst:
+        :return:
+        """
         samples_in_each_interval = 10
         interval_length = 500
         num_intervals = self.retrieve_num // samples_in_each_interval
