@@ -58,7 +58,8 @@ class LoadBertPretrainingDataset(object):
                  data_name='ci',
                  masked_rate=0.15,
                  masked_token_rate=0.8,
-                 masked_token_unchanged_rate=0.5):
+                 masked_token_unchanged_rate=0.5,
+                 nsp_num_classes=2):
         self.tokenizer = tokenizer
         self.vocab = build_vocab(vocab_path)
         self.PAD_IDX = pad_index
@@ -77,14 +78,14 @@ class LoadBertPretrainingDataset(object):
         self.masked_token_rate = masked_token_rate
         self.masked_token_unchanged_rate = masked_token_unchanged_rate
         self.random_state = random_state
+        self.nsp_num_classes = nsp_num_classes
         random.seed(random_state)
 
     @staticmethod
     def get_format_data(filepath):
         return read_ci(filepath)
 
-    @staticmethod
-    def get_next_phrase_samples(paragraph, paragraphs):
+    def get_next_phrase_samples(self, paragraph, paragraphs):
         all_phrases = []
         samples = []
         for sentence in paragraph:
@@ -93,16 +94,27 @@ class LoadBertPretrainingDataset(object):
         for i in range(len(all_phrases) - 2):
             if all_phrases[i] == 'sep':
                 continue
-            if all_phrases[i + 1] != 'sep':
-                next_phrase = all_phrases[i + 1]
-                is_next = 1
-            else:
-                next_phrase = all_phrases[i + 2]
-                is_next = 2
-            if random.random() < 0.33:
-                next_phrase = random.choice(random.choice(random.choice(paragraphs)))
-                is_next = 0
-            samples.append((all_phrases[i], next_phrase, is_next))
+            if self.nsp_num_classes == 3:
+                if all_phrases[i + 1] != 'sep':
+                    next_phrase = all_phrases[i + 1]
+                    is_next = 1
+                else:
+                    next_phrase = all_phrases[i + 2]
+                    is_next = 2
+                if random.random() < 0.33:
+                    next_phrase = random.choice(random.choice(random.choice(paragraphs)))
+                    is_next = 0
+                samples.append((all_phrases[i], next_phrase, is_next))
+            elif self.nsp_num_classes == 2:
+                if all_phrases[i + 1] != 'sep':
+                    next_phrase = all_phrases[i + 1]
+                    is_next = 1
+                else:
+                    continue
+                if random.random() < 0.5:
+                    next_phrase = random.choice(random.choice(random.choice(paragraphs)))
+                    is_next = 0
+                samples.append((all_phrases[i], next_phrase, is_next))
         return samples
 
     def replace_masked_tokens(self, token_ids, candidate_pred_positions, num_mlm_preds):
@@ -229,7 +241,7 @@ class LoadBertPretrainingDataset(object):
     def load_train_val_test_data(self, file_path=None, only_test=False):
 
         postfix = f"_ml{self.max_sen_len}_rs{self.random_state}_mr{str(self.masked_rate)[2:]}" \
-                  f"_mtr{str(self.masked_token_rate)[2:]}_mtur{str(self.masked_token_unchanged_rate)[2:]}"
+                  f"_mtr{str(self.masked_token_rate)[2:]}_mtur{str(self.masked_token_unchanged_rate)[2:]}_nspnc{self.nsp_num_classes}"
 
         processed = self.data_process(filepath=file_path, postfix=postfix)
 
@@ -262,8 +274,8 @@ class LoadBertPretrainingDataset(object):
         input_tokens_ids = []
         for i in range(len(history)):
             history_token_ids = []
-            for (sentence, punc) in history[i]:
-                history_token_ids += [self.vocab[t] for t in self.tokenizer(sentence+punc)]
+            for item in history[i]:
+                history_token_ids += [self.vocab[t] for t in self.tokenizer(''.join(item))]
             next_phrase_token_ids = [self.vocab[t] for t in self.tokenizer(next_phrase[i])]
             token_ids = [self.CLS_IDX] + history_token_ids + [self.SEP_IDX] + next_phrase_token_ids
             if len(token_ids) > self.max_position_embeddings - 1:

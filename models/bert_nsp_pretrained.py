@@ -72,7 +72,7 @@ class BertNSPPretrained(nn.Module):
             # weights = self.bert.bert_embeddings.word_embeddings.embedding.weight
             weights = self.bert._modules['embeddings'].word_embeddings.weight
         self.mlm_prediction = BertForLMTransformHead(config, weights)
-        self.nsp_prediction = nn.Linear(config.hidden_size, 3)
+        self.nsp_prediction = nn.Linear(config.hidden_size, config.nsp_num_classes)
         self.config = config
 
     def forward(self,
@@ -102,7 +102,7 @@ class BertNSPPretrained(nn.Module):
             # 如果MLM任务在padding和MASK中用100之类的来代替，那么两者可以共用一个CrossEntropyLoss
             mlm_loss = loss_fct_mlm(mlm_prediction_logits.reshape(-1, self.config.vocab_size),
                                     mlm_labels.reshape(-1))
-            nsp_loss = loss_fct_nsp(nsp_pred_logits.reshape(-1, 3),
+            nsp_loss = loss_fct_nsp(nsp_pred_logits.reshape(-1, self.config.nsp_num_classes),
                                     next_phrase_labels.reshape(-1))
             total_loss = mlm_loss + nsp_loss
             return total_loss, mlm_prediction_logits, nsp_pred_logits

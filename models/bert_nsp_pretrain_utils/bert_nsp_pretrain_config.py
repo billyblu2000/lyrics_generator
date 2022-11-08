@@ -51,6 +51,7 @@ class ModelConfig:
         self.validation_set_portion = 0.1
         self.test_set_portion = 0.1
         self.model_val_per_epoch = 1
+        self.nsp_num_classes = 2
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
         bert_config_path = os.path.join(self.pretrained_model_dir, "config.json")

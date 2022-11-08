@@ -39,7 +39,8 @@ def train(config):
                                              data_name=config.data_name,
                                              masked_rate=config.masked_rate,
                                              masked_token_rate=config.masked_token_rate,
-                                             masked_token_unchanged_rate=config.masked_token_unchanged_rate)
+                                             masked_token_unchanged_rate=config.masked_token_unchanged_rate,
+                                             nsp_num_classes=config.nsp_num_classes)
     train_iter, test_iter, val_iter = data_loader.load_train_val_test_data(file_path=config.dataset_dir)
     # Optimizer
     # Split weights in two groups, one with weight decay and the other not.
@@ -142,7 +143,8 @@ def evaluate(config):
                                              data_name=config.data_name,
                                              masked_rate=config.masked_rate,
                                              masked_token_rate=config.masked_token_rate,
-                                             masked_token_unchanged_rate=config.masked_token_unchanged_rate)
+                                             masked_token_unchanged_rate=config.masked_token_unchanged_rate,
+                                             nsp_num_classes=config.nsp_num_classes)
     train_iter, test_iter, val_iter = data_loader.load_train_val_test_data(file_path=config.dataset_dir)
     mlm_acc, nsp_acc = do_evaluate(config, val_iter, model, data_loader.PAD_IDX)
     return mlm_acc, nsp_acc
@@ -159,7 +161,6 @@ def accuracy(mlm_logits, nsp_logits, mlm_labels, nsp_label, PAD_IDX):
     mlm_correct = mlm_acc.sum().item()
     mlm_total = mask.sum().item()
     mlm_acc = float(mlm_correct) / mlm_total
-
     nsp_correct = (nsp_logits.argmax(1) == nsp_label).float().sum()
     nsp_total = len(nsp_label)
     nsp_acc = float(nsp_correct) / nsp_total
@@ -187,6 +188,7 @@ def do_evaluate(config, data_iter, model, PAD_IDX):
             mlm_totals += mlm_tot
             nsp_corrects += nsp_cor
             nsp_totals += nsp_tot
+            print(float(nsp_corrects) / nsp_totals)
     model.train()
     return [float(mlm_corrects) / mlm_totals,
             float(nsp_corrects) / nsp_totals]
