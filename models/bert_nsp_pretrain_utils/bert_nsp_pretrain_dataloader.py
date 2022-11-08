@@ -233,7 +233,7 @@ class LoadBertPretrainingDataset(object):
 
         processed = self.data_process(filepath=file_path, postfix=postfix)
 
-        data, max_len = processed['data'][:320], processed['max_len']
+        data, max_len = processed['data'][:], processed['max_len']
         if self.max_sen_len == 'same':
             self.max_sen_len = max_len
 
