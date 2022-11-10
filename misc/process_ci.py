@@ -19,11 +19,20 @@ def extract_rhythmic_and_title(name):
 
 def extract_paragraphs(cip):
     paragraphs = []
+    punc = []
+    sentences = []
     for p in cip:
         temp = p.split('，')
         for t in temp:
             paragraphs += t.split('、')
-    return [i.rstrip('。') for i in paragraphs]
+    for i in paragraphs:
+        if i[-1] == '。':
+            punc.append(2)
+            sentences.append(i[:-1])
+        else:
+            punc.append(1)
+            sentences.append(i)
+    return sentences, punc
 
 
 def get_index(frame, q):
@@ -65,13 +74,15 @@ def process_con(con, depth, dynamic_depth_threshold=4, start_indicator=True, end
     return result
 
 
-def add_song(rhy_index, author_index, title, song_index, cons, depth):
+def add_song(rhy_index, author_index, title, song_index, cons, punc, depth):
     counter = 0
     song_phrases = []
     for con in cons:
-        print(con)
         phrases = process_con(con, depth=depth)
         for item in phrases:
+            punc_after = 0
+            if item[3]:
+                punc_after = punc.pop(0)
             phrase_dict = {
                 'phrase': item[0],
                 'type': item[1],
@@ -81,11 +92,11 @@ def add_song(rhy_index, author_index, title, song_index, cons, depth):
                 'rhy_index': rhy_index,
                 'author_index': author_index,
                 'song_index': song_index,
-                'song_title': title
+                'song_title': title,
+                'punc_after': punc_after
             }
             song_phrases.append(phrase_dict)
         counter += 1
-    input()
     return song_phrases
 
 
@@ -112,8 +123,8 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
             rhy_index = get_index(rhythmic_frame, rhy)
             author_index = get_index(author_frame, author)
             try:
-                paragraphs = extract_paragraphs(ci['paragraphs'])
-                database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], depth=depth)
+                paragraphs, punc = extract_paragraphs(ci['paragraphs'])
+                database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], punc, depth=depth)
                 counter += 1
             except:
                 print('An error occurred!')
@@ -121,7 +132,7 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
 
     database = pd.DataFrame(database, columns=['phrase', 'type', 'is_begin_in_sentence', 'is_end_in_sentence',
                                                'sentence_position_in_song', 'rhy_index',
-                                               'author_index', 'song_index', 'song_title'])
+                                               'author_index', 'song_index', 'song_title', 'punc_after'])
     database.to_csv(os.path.join(save_path, f'phrase_database_d{depth}.csv'))
     rhythmic_frame.to_csv(os.path.join(save_path, 'rhythmic_index.csv'))
     author_frame.to_csv(os.path.join(save_path, 'author_index.csv'))

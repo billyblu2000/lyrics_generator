@@ -30,19 +30,6 @@ def read_ci(filepath='data/phrase_database_d0_drop_dup.csv'):
     return paragraphs
 
 
-class CiDataset(Dataset):
-
-    def __init__(self, dataset):
-        self.data = dataset['data']
-        self.max_len = dataset['max_len']
-
-    def __getitem__(self, index) -> T_co:
-        return self.data[index]
-
-    def __len__(self):
-        return len(self.data)
-
-
 class LoadBertPretrainingDataset(object):
     def __init__(self,
                  vocab_path='./vocab.txt',

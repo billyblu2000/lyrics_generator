@@ -1,4 +1,4 @@
-
+# coding=gbk
 import random
 from typing import List, Union, Sequence
 
@@ -37,6 +37,9 @@ class PhraseConnector:
     def run(self, phrases: pd.DataFrame, song_structure: SongStructure) -> Lyrics:
         return self(phrases, song_structure)
 
+    def _dp_solve(self):
+        pass
+
     def __next_phrase_predictor_model_init(self):
         """
         Initialize the npp model
@@ -65,7 +68,7 @@ class PhraseConnector:
         for i in range(len(self.all_rhymes)):
             self.rhyme_vector_mapping[self.all_rhymes[i]] = np.zeros(self.num_rhymes)
             self.rhyme_vector_mapping[self.all_rhymes[i]][i] = 1
-        self.max_rhyme_variance = np.var([0]*(self.num_rhymes-1) + [1])*self.num_rhymes
+        self.max_rhyme_variance = np.var([0] * (self.num_rhymes - 1) + [1]) * self.num_rhymes
 
     def next_phrase_inference(self,
                               history: Union[Lyrics, List[Lyrics]],
@@ -94,11 +97,28 @@ class PhraseConnector:
                     next_phrase: Union[str, List[str]]) -> Union[List[float], float]:
         """
 
-        :rtype: object
-        :param history:
-        :param next_phrase:
+        :rtype: rhyme loss or a list of rhyme losses, depending on the input shape
+        :param history: (a list of) the generated lyrics history
+        :param next_phrase: (a list of) next phrase
         """
-        all_rhyme_words = []
+
+        if isinstance(history[0], tuple):
+            history = [history]
+            next_phrase = [next_phrase]
+        all_losses = []
+        for i in range(len(history)):
+            all_rhyme_words = []
+            for item in history[i]:
+                if len(item) == 2:
+                    if item[1] == '¡£':
+                        all_rhyme_words.append(item[0][-1])
+            all_rhyme_words.append(next_phrase[i][-1])
+            all_rhyme_vectors = np.array([self.rhyme_vector_mapping[w] for w in all_rhyme_words])
+            all_losses.append(np.var(all_rhyme_vectors, axis=0).sum() / self.max_rhyme_variance)
+        if len(all_losses) == 1:
+            return all_losses[0]
+        else:
+            return all_losses
 
     def _sentence_length_loss(self, history: Union[Lyrics, List[Lyrics]],
                               next_phrase: Union[str, List[str]],
@@ -110,7 +130,29 @@ class PhraseConnector:
         :param next_phrase:
         :param sentence_structure:
         """
-        pass
+        if isinstance(history[0], tuple):
+            history = [history]
+            next_phrase = [next_phrase]
+        all_losses = []
+        for i in range(len(history)):
+            loss = 0
+            for j in range(len(history[i])):
+                act_length = len(history[i][j][0])
+                exp_length = sentence_structure[i][j][0]
+                if j == len(history[i]) - 1:
+                    act_length += len(next_phrase[i])
+                loss += self._single_sentence_length_loss(exp_length, act_length)
+            loss /= len(history[i])
+            all_losses.append(loss)
+        if len(all_losses) == 1:
+            return all_losses[0]
+        else:
+            return all_losses
+
+    @staticmethod
+    def _single_sentence_length_loss(exp: int, act: int) -> float:
+        x = abs(exp - act) / exp
+        return (2 - x) * x
 
     def _fluency_loss(self, history: Union[Lyrics, List[Lyrics]],
                       next_phrase: Union[str, List[str]]) -> Union[List[float], float]:
@@ -131,4 +173,4 @@ if __name__ == '__main__':
     for i in range(100):
         prev_p = random.choice(all_phrases)
         next_p = random.choice(all_phrases)
-        print(f'{prev_p} {next_p}: {connector.next_phrase_inference([(prev_p)], next_p)}',)
+        print(f'{prev_p} {next_p}: {connector.next_phrase_inference([(prev_p)], next_p)}', )
