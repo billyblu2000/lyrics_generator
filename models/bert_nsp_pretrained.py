@@ -104,7 +104,10 @@ class BertNSPPretrained(nn.Module):
                                     mlm_labels.reshape(-1))
             nsp_loss = loss_fct_nsp(nsp_pred_logits.reshape(-1, self.config.nsp_num_classes),
                                     next_phrase_labels.reshape(-1))
-            total_loss = mlm_loss + nsp_loss
+            if self.config.only_mlm_task:
+                total_loss = mlm_loss
+            else:
+                total_loss = mlm_loss + nsp_loss
             return total_loss, mlm_prediction_logits, nsp_pred_logits
         else:
             return mlm_prediction_logits, nsp_pred_logits

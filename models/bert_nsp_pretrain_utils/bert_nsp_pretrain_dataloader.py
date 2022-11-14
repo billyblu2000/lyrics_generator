@@ -24,6 +24,8 @@ def read_ci(filepath='data/phrase_database_d0_drop_dup.csv'):
             sentence = []
             last_song_id = record['song_index']
         sentence.append(record['phrase'])
+        if record['punc_after'] != 0:
+            sentence.append('，' if record['punc_after'] == 1 else '。')
         if record['is_end_in_sentence']:
             paragraph.append(sentence)
             sentence = []
@@ -46,7 +48,8 @@ class LoadBertPretrainingDataset(object):
                  masked_rate=0.15,
                  masked_token_rate=0.8,
                  masked_token_unchanged_rate=0.5,
-                 nsp_num_classes=2):
+                 nsp_num_classes=2,
+                 only_mlm_task=False):
         self.tokenizer = tokenizer
         self.vocab = build_vocab(vocab_path)
         self.PAD_IDX = pad_index
@@ -66,6 +69,7 @@ class LoadBertPretrainingDataset(object):
         self.masked_token_unchanged_rate = masked_token_unchanged_rate
         self.random_state = random_state
         self.nsp_num_classes = nsp_num_classes
+        self.only_mlm_task = only_mlm_task
         random.seed(random_state)
 
     @staticmethod
@@ -75,33 +79,56 @@ class LoadBertPretrainingDataset(object):
     def get_next_phrase_samples(self, paragraph, paragraphs):
         all_phrases = []
         samples = []
+
         for sentence in paragraph:
-            all_phrases += sentence
-            all_phrases.append('sep')
-        for i in range(len(all_phrases) - 2):
-            if all_phrases[i] == 'sep':
-                continue
-            if self.nsp_num_classes == 3:
-                if all_phrases[i + 1] != 'sep':
-                    next_phrase = all_phrases[i + 1]
-                    is_next = 1
-                else:
-                    next_phrase = all_phrases[i + 2]
-                    is_next = 2
-                if random.random() < 0.33:
-                    next_phrase = random.choice(random.choice(random.choice(paragraphs)))
-                    is_next = 0
-                samples.append((all_phrases[i], next_phrase, is_next))
-            elif self.nsp_num_classes == 2:
-                if all_phrases[i + 1] != 'sep':
-                    next_phrase = all_phrases[i + 1]
-                    is_next = 1
-                else:
+            if sentence == '，':
+                if all_phrases[-1] == 'sep':
+                    all_phrases = all_phrases[:-1]
+                all_phrases.append('com')
+            elif sentence == '。':
+                if all_phrases[-1] == 'sep':
+                    all_phrases = all_phrases[:-1]
+                all_phrases.append('stop')
+            else:
+                all_phrases += sentence
+                all_phrases.append('sep')
+        if self.only_mlm_task:
+            reconstruction = ''
+            for i in range(len(all_phrases)):
+                if all_phrases[i] == 'sep':
                     continue
-                if random.random() < 0.5:
-                    next_phrase = random.choice(random.choice(random.choice(paragraphs)))
-                    is_next = 0
-                samples.append((all_phrases[i], next_phrase, is_next))
+                elif all_phrases[i] == 'com':
+                    reconstruction = reconstruction + '，'
+                elif all_phrases[i] == 'stop':
+                    reconstruction = reconstruction + '。'
+                else:
+                    reconstruction = reconstruction + all_phrases[i]
+            samples.append((reconstruction, '', False))
+        else:
+            for i in range(len(all_phrases) - 2):
+                if all_phrases[i] == 'sep':
+                    continue
+                if self.nsp_num_classes == 3:
+                    if all_phrases[i + 1] != 'sep':
+                        next_phrase = all_phrases[i + 1]
+                        is_next = 1
+                    else:
+                        next_phrase = all_phrases[i + 2]
+                        is_next = 2
+                    if random.random() < 0.33:
+                        next_phrase = random.choice(random.choice(random.choice(paragraphs)))
+                        is_next = 0
+                    samples.append((all_phrases[i], next_phrase, is_next))
+                elif self.nsp_num_classes == 2:
+                    if all_phrases[i + 1] != 'sep':
+                        next_phrase = all_phrases[i + 1]
+                        is_next = 1
+                    else:
+                        continue
+                    if random.random() < 0.5:
+                        next_phrase = random.choice(random.choice(random.choice(paragraphs)))
+                        is_next = 0
+                    samples.append((all_phrases[i], next_phrase, is_next))
         return samples
 
     def replace_masked_tokens(self, token_ids, candidate_pred_positions, num_mlm_preds):
@@ -228,7 +255,8 @@ class LoadBertPretrainingDataset(object):
     def load_train_val_test_data(self, file_path=None, only_test=False):
 
         postfix = f"_ml{self.max_sen_len}_rs{self.random_state}_mr{str(self.masked_rate)[2:]}" \
-                  f"_mtr{str(self.masked_token_rate)[2:]}_mtur{str(self.masked_token_unchanged_rate)[2:]}_nspnc{self.nsp_num_classes}"
+                  f"_mtr{str(self.masked_token_rate)[2:]}_mtur{str(self.masked_token_unchanged_rate)[2:]}" \
+                  f"_nspnc{self.nsp_num_classes}_only_mlm{str(self.only_mlm_task)}"
 
         processed = self.data_process(filepath=file_path, postfix=postfix)
 
@@ -278,20 +306,4 @@ class LoadBertPretrainingDataset(object):
 
 
 if __name__ == '__main__':
-    config = ModelConfig()
-    bert_tokenize = BertTokenizer.from_pretrained(config.pretrained_model_dir).tokenize
-    data_loader = LoadBertPretrainingDataset(vocab_path=config.vocab_path,
-                                             tokenizer=bert_tokenize,
-                                             batch_size=config.batch_size,
-                                             max_sen_len=config.max_sen_len,
-                                             max_position_embeddings=config.max_position_embeddings,
-                                             pad_index=config.pad_index,
-                                             is_sample_shuffle=config.is_sample_shuffle,
-                                             validation_set_portion=config.validation_set_portion,
-                                             test_set_portion=config.test_set_portion,
-                                             random_state=config.random_state,
-                                             data_name=config.data_name,
-                                             masked_rate=config.masked_rate,
-                                             masked_token_rate=config.masked_token_rate,
-                                             masked_token_unchanged_rate=config.masked_token_unchanged_rate)
-    data_loader.data_process(filepath=config.dataset_dir, postfix='bert_nsp_ci_pretrain')
+    pass

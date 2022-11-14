@@ -10,7 +10,7 @@ class ModelConfig:
     def __init__(self):
         self.project_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-        self.dataset_dir = os.path.join(self.project_dir, 'data', 'phrase_database_d0_drop_dup.csv')
+        self.dataset_dir = os.path.join(self.project_dir, 'data', 'phrase_database_d0.csv')
         # self.pretrained_model_dir = os.path.join(self.project_dir, "bert_base_chinese")
         self.pretrained_model_dir = os.path.join(self.project_dir, 'data', 'bert_base_chinese')
         self.train_file_path = os.path.join(self.dataset_dir, 'songci.train.txt')
@@ -42,6 +42,7 @@ class ModelConfig:
         self.test_set_portion = 0.1
         self.model_val_per_epoch = 1
         self.nsp_num_classes = 3
+        self.only_mlm_task = True
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
         bert_config_path = os.path.join(self.pretrained_model_dir, "config.json")
