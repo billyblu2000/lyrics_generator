@@ -77,58 +77,72 @@ class LoadBertPretrainingDataset(object):
         return read_ci(filepath)
 
     def get_next_phrase_samples(self, paragraph, paragraphs):
-        all_phrases = []
-        samples = []
-
-        for sentence in paragraph:
-            if sentence == '，':
-                if all_phrases[-1] == 'sep':
-                    all_phrases = all_phrases[:-1]
-                all_phrases.append('com')
-            elif sentence == '。':
-                if all_phrases[-1] == 'sep':
-                    all_phrases = all_phrases[:-1]
-                all_phrases.append('stop')
-            else:
-                all_phrases += sentence
-                all_phrases.append('sep')
-        if self.only_mlm_task:
+        def reconstruct(phrases):
             reconstruction = ''
-            for i in range(len(all_phrases)):
-                if all_phrases[i] == 'sep':
+            for i in range(len(phrases)):
+                if phrases[i] == 'sep':
                     continue
-                elif all_phrases[i] == 'com':
+                elif phrases[i] == 'com':
                     reconstruction = reconstruction + '，'
-                elif all_phrases[i] == 'stop':
+                elif phrases[i] == 'stop':
                     reconstruction = reconstruction + '。'
                 else:
-                    reconstruction = reconstruction + all_phrases[i]
-            samples.append((reconstruction, '', False))
+                    reconstruction = reconstruction + phrases[i]
+            return reconstruction
+
+        all_phrases = []
+        samples = []
+        for sentence in paragraph:
+            for p in sentence:
+                if p == '，':
+                    if all_phrases[-1] == 'sep':
+                        all_phrases = all_phrases[:-1]
+                    all_phrases.append('com')
+                elif p == '。':
+                    if all_phrases[-1] == 'sep':
+                        all_phrases = all_phrases[:-1]
+                    all_phrases.append('stop')
+                else:
+                    all_phrases.append(p)
+                    all_phrases.append('sep')
+        if self.only_mlm_task:
+            samples.append((reconstruct(all_phrases), '', False))
         else:
-            for i in range(len(all_phrases) - 2):
-                if all_phrases[i] == 'sep':
-                    continue
-                if self.nsp_num_classes == 3:
-                    if all_phrases[i + 1] != 'sep':
-                        next_phrase = all_phrases[i + 1]
-                        is_next = 1
+            first_half = all_phrases[: len(all_phrases) // 2]
+            second_half = all_phrases[len(all_phrases) // 2:]
+            reconstruction = reconstruct(first_half)
+            prepared_samples = dict(sep=[], com=[], stop=[])
+            last_punc = ''
+            for p in second_half:
+                if p not in ['sep', 'com', 'stop']:
+                    if last_punc:
+                        prepared_samples[last_punc].append((reconstruction, p))
+                    if last_punc == 'sep' or last_punc == '':
+                        reconstruction = reconstruction + p
+                    elif last_punc == 'com':
+                        reconstruction = reconstruction + '，' + p
+                    elif last_punc == 'stop':
+                        reconstruction = reconstruction + '。' + p
+                else:
+                    last_punc = p
+            if self.nsp_num_classes == 2:
+                prepared_samples = {1: prepared_samples['sep'] + prepared_samples['com'] + prepared_samples['stop']}
+            elif self.nsp_num_classes == 3:
+                prepared_samples = {1: prepared_samples['sep'], 2: prepared_samples['com'] + prepared_samples['stop']}
+                min_l = min([len(prepared_samples[1]), len(prepared_samples[2])])
+                prepared_samples[1] = prepared_samples[1][:min_l]
+                prepared_samples[2] = prepared_samples[2][:min_l]
+            elif self.nsp_num_classes == 4:
+                prepared_samples = {1: prepared_samples['sep'], 2: prepared_samples['com'], 3: prepared_samples['stop']}
+                min_l = min([len(prepared_samples[1]), len(prepared_samples[2]), len(prepared_samples[3])])
+                prepared_samples[1] = prepared_samples[1][:min_l]
+                prepared_samples[2] = prepared_samples[2][:min_l]
+            for (label, sample_list) in prepared_samples.items():
+                for item in sample_list:
+                    if random.random() > 1/self.nsp_num_classes:
+                        samples.append((item[0], item[1], label))
                     else:
-                        next_phrase = all_phrases[i + 2]
-                        is_next = 2
-                    if random.random() < 0.33:
-                        next_phrase = random.choice(random.choice(random.choice(paragraphs)))
-                        is_next = 0
-                    samples.append((all_phrases[i], next_phrase, is_next))
-                elif self.nsp_num_classes == 2:
-                    if all_phrases[i + 1] != 'sep':
-                        next_phrase = all_phrases[i + 1]
-                        is_next = 1
-                    else:
-                        continue
-                    if random.random() < 0.5:
-                        next_phrase = random.choice(random.choice(random.choice(paragraphs)))
-                        is_next = 0
-                    samples.append((all_phrases[i], next_phrase, is_next))
+                        samples.append((item[0], random.choice(random.choice(random.choice(paragraphs))), 0))
         return samples
 
     def replace_masked_tokens(self, token_ids, candidate_pred_positions, num_mlm_preds):
@@ -268,8 +282,9 @@ class LoadBertPretrainingDataset(object):
         num_samples_val, num_samples_test = int(num_samples * self.val_set_portion), \
                                             int(num_samples * self.test_set_portion)
         train_data, val_data, test_data = torch.utils.data.random_split(data,
-                                                                        [num_samples-num_samples_test-num_samples_val,
-                                                                        num_samples_val, num_samples_test])
+                                                                        [
+                                                                            num_samples - num_samples_test - num_samples_val,
+                                                                            num_samples_val, num_samples_test])
 
         test_iter = DataLoader(test_data, batch_size=self.batch_size,
                                shuffle=False, collate_fn=self.generate_batch)

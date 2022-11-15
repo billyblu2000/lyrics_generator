@@ -145,7 +145,8 @@ def evaluate(config):
                                              masked_rate=config.masked_rate,
                                              masked_token_rate=config.masked_token_rate,
                                              masked_token_unchanged_rate=config.masked_token_unchanged_rate,
-                                             nsp_num_classes=config.nsp_num_classes)
+                                             nsp_num_classes=config.nsp_num_classes,
+                                             only_mlm_task=config.only_mlm_task)
     train_iter, test_iter, val_iter = data_loader.load_train_val_test_data(file_path=config.dataset_dir)
     mlm_acc, nsp_acc = do_evaluate(config, val_iter, model, data_loader.PAD_IDX)
     return mlm_acc, nsp_acc

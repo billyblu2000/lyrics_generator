@@ -17,13 +17,13 @@ class ModelConfig:
         self.val_file_path = os.path.join(self.dataset_dir, 'songci.valid.txt')
         self.test_file_path = os.path.join(self.dataset_dir, 'songci.test.txt')
         self.data_name = 'ci'
-
+        self.task_name = ''
         self.vocab_path = os.path.join(self.pretrained_model_dir, 'vocab.txt')
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.model_save_dir = os.path.join(self.project_dir, 'cache')
         self.logs_save_dir = os.path.join(self.project_dir, 'logs')
-        self.model_save_path = os.path.join(self.model_save_dir, f'model_{self.data_name}.bin')
-        self.writer = SummaryWriter(os.path.join(self.project_dir, 'runs', self.data_name))
+        self.model_save_path = os.path.join(self.model_save_dir, f'model_{self.task_name}.bin')
+        self.writer = SummaryWriter(os.path.join(self.project_dir, 'runs', self.task_name))
         self.is_sample_shuffle = True
         self.use_embedding_weight = True
         self.batch_size = 32
@@ -41,8 +41,8 @@ class ModelConfig:
         self.validation_set_portion = 0.1
         self.test_set_portion = 0.1
         self.model_val_per_epoch = 1
-        self.nsp_num_classes = 3
-        self.only_mlm_task = True
+        self.nsp_num_classes = 2
+        self.only_mlm_task = False
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
         bert_config_path = os.path.join(self.pretrained_model_dir, "config.json")
