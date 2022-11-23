@@ -19,5 +19,5 @@ source /share/apps/anaconda3/2020.07/etc/profile.d/conda.sh;
 conda activate /scratch/ly1387/lyrics;
 export PATH=/scratch/ly1387/lyrics/bin:$PATH;
 
-cd /scratch/ly1387/projects/lyrics_generator/train;
+cd /scratch/ly1387/projects/lyrics_generator;
 python train_bert_nsp.py
