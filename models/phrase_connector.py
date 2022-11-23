@@ -56,22 +56,29 @@ class PhraseConnector:
         while next_iter:
             this_iter = copy.deepcopy(next_iter)
             next_iter = []
-            print('this_iter')
-            print(this_iter)
+            # print('this_iter')
+            # print(this_iter)
             # go through this iteration, add potential next phrase to next iteration
             for item in this_iter:
-                print('item', item)
+                # print('item', item)
                 history = item[0]
                 candidates = []
+                temp = []
                 for next_phrase in all_phrases:
                     if next_phrase in item[2]:
                         continue
+                    else:
+                        temp.append(next_phrase)
+                all_fluency_loss = self._fluency_loss(history=[history]*len(temp), next_phrase=temp)
+                # print(all_fluency_loss)
+                count = 0
+                for next_phrase in temp:
                     possibilities = [
                         history[:-1] + [(history[-1][0] + next_phrase,)],
                         history[:-1] + [(history[-1][0], '£¬'), (next_phrase,)],
                         history[:-1] + [(history[-1][0], '¡£'), (next_phrase,)],
                     ]
-                    fluency_loss = self._fluency_loss(history=history, next_phrase=next_phrase)
+                    fluency_loss = all_fluency_loss[count]
                     rhyme_loss = self._rhyme_loss(possibilities)
                     sentence_length_loss = self._sentence_length_loss(possibilities, song_structure)
                     for i in range(len(possibilities)):
@@ -82,6 +89,7 @@ class PhraseConnector:
                             completed.append(with_loss)
                         elif len(possibilities[i]) <= len(song_structure):
                             candidates.append(with_loss)
+                    count += 1
                 candidates = sorted(candidates, key=lambda x: x[1])[:num_beams]
                 next_iter += candidates
 
@@ -138,10 +146,6 @@ class PhraseConnector:
         :param next_phrase: next phrase string or sequence of next phrase string
         """
         token_ids, mask = self.npp_model_data_loader.make_inference_sample(history, next_phrase)
-        token_ids, mask = torch.tensor([[101, 1282, 2388, 978, 103, 10555, 8024, 1921, 2692, 2341,
-                                         998, 6121, 2145, 511, 3353, 4680, 758, 3959, 756, 3857,
-                                         8024, 3793, 4007, 4958, 4904, 5682, 511, 103, 103, 2418,
-                                         2597, 102, 6428, 881, 3309, 102]]), torch.tensor([[True] * 36])
         with torch.no_grad():
             token_ids = token_ids.to(self.npp_model_config.device)
             mask = mask.to(self.npp_model_config.device)
@@ -233,8 +237,12 @@ class PhraseConnector:
         :param history:
         :param next_phrase:
         """
-        logits = self._next_phrase_inference(history=history, next_phrase=next_phrase)[0][1:]
-        return 1 - logits
+        if type(next_phrase) == str:
+            logits = self._next_phrase_inference(history=history, next_phrase=next_phrase)[0][1:]
+            return 1 - logits
+        else:
+            logits = self._next_phrase_inference(history=history, next_phrase=next_phrase)[:, 1:]
+            return 1 - logits
 
 
 if __name__ == '__main__':
