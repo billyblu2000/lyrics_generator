@@ -17,7 +17,7 @@ class ModelConfig:
         self.val_file_path = os.path.join(self.dataset_dir, 'songci.valid.txt')
         self.test_file_path = os.path.join(self.dataset_dir, 'songci.test.txt')
         self.data_name = 'ci'
-        self.task_name = 'bert_nsp_pretrained_4_class'
+        self.task_name = 'bert_nsp_pretrain_4class'
         self.vocab_path = os.path.join(self.pretrained_model_dir, 'vocab.txt')
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.model_save_dir = os.path.join(self.project_dir, 'cache')
@@ -26,14 +26,14 @@ class ModelConfig:
         self.writer = SummaryWriter(os.path.join(self.project_dir, 'runs', self.task_name))
         self.is_sample_shuffle = True
         self.use_embedding_weight = True
-        self.batch_size = 32
+        self.batch_size = 16
         self.max_sen_len = None
         self.max_position_embeddings = 512
         self.pad_index = 0
         self.random_state = 2022
         self.learning_rate = 4e-5
         self.weight_decay = 0.1
-        self.masked_rate = 0.15
+        self.masked_rate = 0.0
         self.masked_token_rate = 0.8
         self.masked_token_unchanged_rate = 0.5
         self.use_torch_multi_head = False

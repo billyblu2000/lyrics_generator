@@ -69,7 +69,7 @@ class PhraseConnector:
                         continue
                     else:
                         temp.append(next_phrase)
-                all_fluency_loss = self._fluency_loss(history=[history]*len(temp), next_phrase=temp)
+                all_fluency_loss = self._fluency_loss(history=[history] * len(temp), next_phrase=temp)
                 # print(all_fluency_loss)
                 count = 0
                 for next_phrase in temp:
@@ -246,18 +246,8 @@ class PhraseConnector:
 
 
 if __name__ == '__main__':
-    phrase = [
-        '十幅健帆风，天意巧催行客。极目五湖云浪，泛满空秋色。',
-        '玉人应怪',
-        '误佳期',
-        '凝恨',
-        '正脉脉',
-        '锦鳞为传',
-        '尺素',
-        '报',
-        '兰舟',
-        '消息',
-    ]
+    phrase = ['东风半夜度关山，和雪到阑干。', '怪见', '梅梢', '未暖', '情知', '柳眼', '犹寒', '青丝菜甲', '银泥饼饵',
+              '随分杯盘', '已把', '宜春', '缕胜', '更将', '长命', '题幡']
 
     connector = PhraseConnector(config)
     result = phrase[0]
