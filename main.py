@@ -1,15 +1,15 @@
 from models.model import Model
 import time
 
+
 def main(rhythmic, title):
     my_model = Model.init_model()
-    my_model(rhythmic, title)
+    for i in range(3):
+        s = time.time()
+        my_model(rhythmic, title)
+        print('time cost: ', time.time() - s)
 
 
 if __name__ == '__main__':
-    test = [['', '千古兴亡多少事'],
-            ]
-    for i in test:
-        s = time.time()
-        main(i[0], i[1])
-        print('time cost: ', time.time() - s)
+    test = ['', '千古兴亡多少事']
+    main(test[0], test[1])
