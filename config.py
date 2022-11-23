@@ -11,9 +11,9 @@ rhythmic_index = os.path.join(data_folder, 'rhythmic_index.csv')
 author_index = os.path.join(data_folder, 'author_index.csv')
 phrase_embedding = os.path.join(data_folder, 'phrase_embs_sentence_granu.npz')
 sentence_transformer_path = 'sentence-transformers/distiluse-base-multilingual-cased'
-npp_model_checkpoint_path = os.path.join(data_folder, 'bert_nsp_pretrained_3_class.bin')
+npp_model_checkpoint_path = os.path.join(data_folder, 'bert_nsp_pretrained_4_class.bin')
 # npp_model_checkpoint_path = os.path.join(project_path, 'cache', 'model_ci.bin')
-rhyme_lookup_table = os.path.join(data_folder, 'word_rhyme.csv')
+rhyme_lookup_table = os.path.join(data_folder, 'word_rhyme_con.csv')
 
 # hyper parameters
 retrieve_num = 500

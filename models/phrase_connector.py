@@ -1,4 +1,5 @@
 # coding=gbk
+import copy
 import random
 from typing import List, Union, Sequence
 
@@ -32,13 +33,62 @@ class PhraseConnector:
         :param phrases:
         :param song_structure:
         """
-        pass
+        return self._search(phrases, song_structure)
 
     def run(self, phrases: pd.DataFrame, song_structure: SongStructure) -> Lyrics:
         return self(phrases, song_structure)
 
-    def _dp_solve(self):
-        pass
+    def _search(self, phrases: pd.DataFrame, song_structure: SongStructure) -> Lyrics:
+
+        def loss(fl, rl, sl):
+            return fl + 2 * rl + 10 * sl
+
+        def is_complete(l):
+            return len(l) == len(song_structure) and len(l[-1][0]) - song_structure[-1][0] >= -1
+
+        begin_phrases = list(
+            phrases.loc[phrases['is_begin_in_sentence'] == 1].loc[phrases['sentence_position_in_song'] == 0]['phrase'])
+        all_phrases = list(phrases['phrase'])
+        next_iter = [[[(p,)], 0, [p]] for p in begin_phrases]
+        completed = []
+        num_beams = 5
+
+        while next_iter:
+            this_iter = copy.deepcopy(next_iter)
+            next_iter = []
+            print('this_iter')
+            print(this_iter)
+            # go through this iteration, add potential next phrase to next iteration
+            for item in this_iter:
+                print('item', item)
+                history = item[0]
+                candidates = []
+                for next_phrase in all_phrases:
+                    if next_phrase in item[2]:
+                        continue
+                    possibilities = [
+                        history[:-1] + [(history[-1][0] + next_phrase,)],
+                        history[:-1] + [(history[-1][0], '，'), (next_phrase,)],
+                        history[:-1] + [(history[-1][0], '。'), (next_phrase,)],
+                    ]
+                    fluency_loss = self._fluency_loss(history=history, next_phrase=next_phrase)
+                    rhyme_loss = self._rhyme_loss(possibilities)
+                    sentence_length_loss = self._sentence_length_loss(possibilities, song_structure)
+                    for i in range(len(possibilities)):
+                        with_loss = [possibilities[i],
+                                     loss(fluency_loss[i], rhyme_loss[i], sentence_length_loss[i]),
+                                     item[2] + [next_phrase]]
+                        if is_complete(possibilities[i]):
+                            completed.append(with_loss)
+                        elif len(possibilities[i]) <= len(song_structure):
+                            candidates.append(with_loss)
+                candidates = sorted(candidates, key=lambda x: x[1])[:num_beams]
+                next_iter += candidates
+
+            # prune next iteration
+            next_iter = sorted(next_iter, key=lambda x: x[1])[:len(begin_phrases) * num_beams]
+        completed = sorted(completed, key=lambda x: x[1])
+        return completed[0][0]
 
     def __next_phrase_predictor_model_init(self):
         """
@@ -62,9 +112,12 @@ class PhraseConnector:
 
     def __rhyme_model_init(self):
         self.rhyme_database = pd.read_csv(self.config.rhyme_lookup_table)
-        self.all_rhymes = ['a', 'o', 'e', 'e2', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'er']
+        self.all_rhymes = ['a', 'o', 'e', 'e2', 'ai', 'ei', 'ao', 'ou', 'an',
+                           'en', 'ang', 'eng', 'er', 'i', 'i2', 'u', 'u2']
         self.num_rhymes = len(self.all_rhymes)
         self.rhyme_vector_mapping = {}
+        self.word_rhyme_mapping = {self.rhyme_database.loc[i]['word']: self.rhyme_database.loc[i]['rhyme']
+                                   for i in range(len(self.rhyme_database['word']))}
         for i in range(len(self.all_rhymes)):
             self.rhyme_vector_mapping[self.all_rhymes[i]] = np.zeros(self.num_rhymes)
             self.rhyme_vector_mapping[self.all_rhymes[i]][i] = 1
@@ -85,26 +138,27 @@ class PhraseConnector:
         :param next_phrase: next phrase string or sequence of next phrase string
         """
         token_ids, mask = self.npp_model_data_loader.make_inference_sample(history, next_phrase)
+        token_ids, mask = torch.tensor([[101, 1282, 2388, 978, 103, 10555, 8024, 1921, 2692, 2341,
+                                         998, 6121, 2145, 511, 3353, 4680, 758, 3959, 756, 3857,
+                                         8024, 3793, 4007, 4958, 4904, 5682, 511, 103, 103, 2418,
+                                         2597, 102, 6428, 881, 3309, 102]]), torch.tensor([[True] * 36])
         with torch.no_grad():
             token_ids = token_ids.to(self.npp_model_config.device)
             mask = mask.to(self.npp_model_config.device)
             _, nsp_logits = self.npp_model(input_ids=token_ids, attention_mask=mask)
-            nsp_pred_score = np.array(torch.softmax(nsp_logits, dim=-1))
+            nsp_pred_score = np.array(torch.softmax(nsp_logits, dim=-1).cpu())
 
         return nsp_pred_score
 
-    def _rhyme_loss(self, history: Union[Lyrics, List[Lyrics]],
-                    next_phrase: Union[str, List[str]]) -> Union[List[float], float]:
+    def _rhyme_loss(self, history: Union[Lyrics, List[Lyrics]]) -> Union[List[float], float]:
         """
 
         :rtype: rhyme loss or a list of rhyme losses, depending on the input shape
         :param history: (a list of) the generated lyrics history
-        :param next_phrase: (a list of) next phrase
         """
 
         if isinstance(history[0], tuple):
             history = [history]
-            next_phrase = [next_phrase]
         all_losses = []
         for i in range(len(history)):
             all_rhyme_words = []
@@ -112,36 +166,50 @@ class PhraseConnector:
                 if len(item) == 2:
                     if item[1] == '。':
                         all_rhyme_words.append(item[0][-1])
-            all_rhyme_words.append(next_phrase[i][-1])
-            all_rhyme_vectors = np.array([self.rhyme_vector_mapping[w] for w in all_rhyme_words])
-            all_losses.append(np.var(all_rhyme_vectors, axis=0).sum() / self.max_rhyme_variance)
+            all_rhyme_vectors = []
+            for w in all_rhyme_words:
+                try:
+                    all_rhyme_vectors.append(self.rhyme_vector_mapping[self.word_rhyme_mapping[w]])
+                except:
+                    pass
+            all_rhyme_vectors = np.array(all_rhyme_vectors)
+            if len(all_rhyme_vectors) != 0:
+                all_losses.append(np.var(all_rhyme_vectors, axis=0).sum() / self.max_rhyme_variance)
+            else:
+                all_losses.append(0.)
         if len(all_losses) == 1:
             return all_losses[0]
         else:
             return all_losses
 
     def _sentence_length_loss(self, history: Union[Lyrics, List[Lyrics]],
-                              next_phrase: Union[str, List[str]],
                               sentence_structure: SongStructure) -> Union[List[float], float]:
         """
 
         :rtype: object
         :param history:
-        :param next_phrase:
         :param sentence_structure:
         """
         if isinstance(history[0], tuple):
             history = [history]
-            next_phrase = [next_phrase]
         all_losses = []
         for i in range(len(history)):
             loss = 0
+            # print(history)
             for j in range(len(history[i])):
+                # print(j)
                 act_length = len(history[i][j][0])
-                exp_length = sentence_structure[i][j][0]
-                if j == len(history[i]) - 1:
-                    act_length += len(next_phrase[i])
-                loss += self._single_sentence_length_loss(exp_length, act_length)
+                # print(act_length)
+                try:
+                    exp_length = sentence_structure[j][0]
+                    # print(exp_length)
+                    loss += self._single_sentence_length_loss(exp_length, act_length)
+                    if sentence_structure[j][1] != history[i][j][1]:
+                        loss += 1
+                    # print(loss)
+                except:
+                    # print(j)
+                    loss += 1
             loss /= len(history[i])
             all_losses.append(loss)
         if len(all_losses) == 1:
@@ -152,7 +220,10 @@ class PhraseConnector:
     @staticmethod
     def _single_sentence_length_loss(exp: int, act: int) -> float:
         x = abs(exp - act) / exp
-        return (2 - x) * x
+        if x < 1:
+            return (2 - x) * x
+        else:
+            return x
 
     def _fluency_loss(self, history: Union[Lyrics, List[Lyrics]],
                       next_phrase: Union[str, List[str]]) -> Union[List[float], float]:
@@ -162,15 +233,34 @@ class PhraseConnector:
         :param history:
         :param next_phrase:
         """
-        pass
+        logits = self._next_phrase_inference(history=history, next_phrase=next_phrase)[0][1:]
+        return 1 - logits
 
 
 if __name__ == '__main__':
-    all_phrases = open('test', 'r', encoding='utf-8').readline().split(',')
-    all_phrases = [i.strip().rstrip("'").lstrip("'") for i in all_phrases]
-    print(all_phrases)
+    phrase = [
+        '十幅健帆风，天意巧催行客。极目五湖云浪，泛满空秋色。',
+        '玉人应怪',
+        '误佳期',
+        '凝恨',
+        '正脉脉',
+        '锦鳞为传',
+        '尺素',
+        '报',
+        '兰舟',
+        '消息',
+    ]
+
     connector = PhraseConnector(config)
-    for i in range(100):
-        prev_p = random.choice(all_phrases)
-        next_p = random.choice(all_phrases)
-        print(f'{prev_p} {next_p}: {connector.next_phrase_inference([(prev_p)], next_p)}', )
+    result = phrase[0]
+    for i in phrase[1:]:
+        sm = connector.next_phrase_inference([(result)], i)
+        max_index = np.argmax(sm[0][1:]) + 1
+
+        if max_index == 1:
+            result = result + i
+        elif max_index == 2:
+            result = result + '，' + i
+        elif max_index == 3:
+            result = result + '。' + i
+    print(result)

@@ -198,4 +198,5 @@ def do_evaluate(config, data_iter, model, PAD_IDX):
 
 if __name__ == '__main__':
     config = ModelConfig()
-    train(config)
+    # train(config)
+    evaluate(config)

@@ -7,5 +7,7 @@ def main(rhythmic, title):
 
 
 if __name__ == '__main__':
-    test = ['', '千古兴亡多少事']
-    main(test[0], test[1])
+    test = [['', '千古兴亡多少事'],
+            ]
+    for i in test:
+        main(i[0], i[1])
