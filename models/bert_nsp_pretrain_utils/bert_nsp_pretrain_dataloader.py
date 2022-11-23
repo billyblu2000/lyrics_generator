@@ -143,8 +143,6 @@ class LoadBertPretrainingDataset(object):
                         samples.append((item[0], item[1], label))
                     else:
                         samples.append((item[0], random.choice(random.choice(random.choice(paragraphs))), 0))
-        print(samples)
-        input()
         return samples
 
     def replace_masked_tokens(self, token_ids, candidate_pred_positions, num_mlm_preds):

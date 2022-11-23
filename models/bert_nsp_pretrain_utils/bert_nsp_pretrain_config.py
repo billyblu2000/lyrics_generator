@@ -33,7 +33,7 @@ class ModelConfig:
         self.random_state = 2022
         self.learning_rate = 4e-5
         self.weight_decay = 0.1
-        self.masked_rate = 0.0
+        self.masked_rate = 0.15
         self.masked_token_rate = 0.8
         self.masked_token_unchanged_rate = 0.5
         self.use_torch_multi_head = False
