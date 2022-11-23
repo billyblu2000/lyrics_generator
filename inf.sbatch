@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=lyrics_inf
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=4
 #SBATCH --ntasks-per-node=4
 #SBATCH --mem=16GB
 #SBATCH --time=4:00:00
