@@ -319,7 +319,6 @@ class LoadBertPretrainingDataset(object):
                                         batch_first=True,
                                         max_len=None)
         mask = input_tokens_ids != self.PAD_IDX
-        print(input_tokens_ids, mask)
         return input_tokens_ids, mask
 
 
