@@ -11,5 +11,5 @@ def main(rhythmic, title):
 
 
 if __name__ == '__main__':
-    test = ['', '千古兴亡多少事']
+    test = ['', '秋天']
     main(test[0], test[1])

@@ -38,6 +38,12 @@ class SentenceTransformersRetriever:
         # selected = heapq.nlargest(self.retrieve_num, sims_with_index, key=lambda x: x[1])
         selected = self.__sample_from_sorted_retrieve(sorted(sims_with_index, key=lambda x:x[1], reverse=True))
         selected_index = [i[0] for i in selected]
+        temp = []
+        for i in selected_index:
+            temp.append(i)
+            if random.random() > 0.7:
+                temp.append(i+1)
+                temp.append(i-1)
         return self.phrase_database.loc[[i in selected_index for i in range(len(self.phrase_database))]]
 
     def __sample_from_sorted_retrieve(self, lst):

@@ -16,4 +16,4 @@ npp_model_checkpoint_path = os.path.join(data_folder, 'model_bert_nsp_pretrain_4
 rhyme_lookup_table = os.path.join(data_folder, 'word_rhyme_con.csv')
 
 # hyper parameters
-retrieve_num = 500
+retrieve_num = 300
