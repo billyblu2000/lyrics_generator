@@ -59,8 +59,8 @@ class PhraseConnector:
         while next_iter:
             this_iter = copy.deepcopy(next_iter)
             next_iter = []
-            print('this_iter')
-            print(this_iter)
+            # print('this_iter')
+            # print(this_iter)
             # go through this iteration, add potential next phrase to next iteration
             for item in this_iter:
                 # print('item', item)
