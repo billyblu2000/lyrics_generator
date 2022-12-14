@@ -16,8 +16,9 @@ class SentenceTransformersRetriever:
         self.st_model = SentenceTransformer(self.config.sentence_transformer_path)
         self.phrase_embedding = np.load(self.config.phrase_embedding)['arr_0']
         self.phrase_database = pd.read_csv(self.config.phrase_database, index_col=0)
+        self.rhy_index = pd.read_csv(self.config.rhythmic_index, index_col=0)
 
-    def __call__(self, title: str) -> pd.DataFrame:
+    def __call__(self, title: str):
         """
 
         :param title: the prompt
@@ -38,13 +39,34 @@ class SentenceTransformersRetriever:
         # selected = heapq.nlargest(self.retrieve_num, sims_with_index, key=lambda x: x[1])
         selected = self.__sample_from_sorted_retrieve(sorted(sims_with_index, key=lambda x:x[1], reverse=True))
         selected_index = [i[0] for i in selected]
-        temp = []
+
+        selected_index_1 = []
+        selected_index_2 = []
         for i in selected_index:
+            relative_pos = self.phrase_database['sentence_position_in_song'][i] / self.rhy_index['num_sentence_count'][self.phrase_database['rhy_index'][i]]
+            if relative_pos > 0.4:
+                selected_index_2.append(i)
+            else:
+                selected_index_1.append(i)
+
+        temp = []
+        for i in selected_index_1:
             temp.append(i)
             if random.random() > 0.7:
                 temp.append(i+1)
                 temp.append(i-1)
-        return self.phrase_database.loc[[i in selected_index for i in range(len(self.phrase_database))]]
+        selected_index_1 = temp
+        temp = []
+        for i in selected_index_2:
+            temp.append(i)
+            if random.random() > 0.7:
+                temp.append(i + 1)
+                temp.append(i - 1)
+        selected_index_2 = temp
+
+        return self.phrase_database.loc[[i in selected_index_1 for i in range(len(self.phrase_database))]],\
+               self.phrase_database.loc[[i in selected_index_2 for i in range(len(self.phrase_database))]]
+
 
     def __sample_from_sorted_retrieve(self, lst):
         """

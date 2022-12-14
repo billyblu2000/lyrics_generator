@@ -46,9 +46,12 @@ class PhraseConnector:
         def is_complete(l):
             return len(l) == len(song_structure) and len(l[-1][0]) - song_structure[-1][0] >= -1
 
+        first_half_phrases = phrases[0]
+        second_half_phrases = phrases[1]
         begin_phrases = list(
-            phrases.loc[phrases['is_begin_in_sentence'] == 1].loc[phrases['sentence_position_in_song'] == 0]['phrase'])
-        all_phrases = list(phrases['phrase'])
+            first_half_phrases.loc[first_half_phrases['is_begin_in_sentence'] == 1].loc[first_half_phrases['sentence_position_in_song'] == 0]['phrase'])
+        all_phrases_first_half = list(first_half_phrases['phrase'])
+        all_phrases_second_half = list(second_half_phrases['phrase'])
         next_iter = [[[(p,)], 0, [p]] for p in begin_phrases]
         completed = []
         num_beams = 5
@@ -64,12 +67,21 @@ class PhraseConnector:
                 history = item[0]
                 candidates = []
                 temp = []
+                if len(item[0]) < len(song_structure) // 2:
+                    all_phrases = all_phrases_first_half
+                else:
+                    all_phrases = all_phrases_second_half
                 for next_phrase in all_phrases:
                     if next_phrase in item[2]:
                         continue
                     else:
                         temp.append(next_phrase)
-                all_fluency_loss = self._fluency_loss(history=[history] * len(temp), next_phrase=temp)
+                j = 0
+                all_fluency_loss = []
+                while j*100 < len(temp):
+                    all_fluency_loss += list(self._fluency_loss(history=[history] * len(temp[j*100: (j+1)*100]), next_phrase=temp[j*100: (j+1)*100]))
+                    j += 1
+                all_fluency_loss = np.array(all_fluency_loss)
                 # print(all_fluency_loss)
                 count = 0
                 for next_phrase in temp:
@@ -220,6 +232,9 @@ class PhraseConnector:
             return all_losses[0]
         else:
             return all_losses
+
+    def _position_loss(self):
+        pass
 
     @staticmethod
     def _single_sentence_length_loss(exp: int, act: int) -> float:

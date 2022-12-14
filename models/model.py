@@ -40,7 +40,7 @@ class Model:
         if config.print_log:
             print(f'Running model with rhythmic "{rhythmic}" and title "{title}"...')
         phrases = self.retriever(title)
-        print(list(phrases['phrase']))
+        print(list(phrases[0]['phrase']), list(phrases[1]['phrase']))
         song_structure = self.find_song_structure(rhythmic)
         lyrics = self.connector(phrases, song_structure)
         print(lyrics)
@@ -54,4 +54,4 @@ class Model:
 
         :param rhythmic:
         """
-        return [(6, '，'), (6, '。'), (5, '，'), (6, '。'), (2, '，'), (2, '，'), (6, '。')]
+        return [(5, '，'), (5, '。'), (7, '，'), (5, '。'), (5, '，'), (5, '。'), (7, '，'), (5, '。')]
