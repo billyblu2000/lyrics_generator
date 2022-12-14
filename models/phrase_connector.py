@@ -33,6 +33,7 @@ class PhraseConnector:
         :param phrases:
         :param song_structure:
         """
+        print('Start connecting...')
         return self._search(phrases, song_structure)
 
     def run(self, phrases: pd.DataFrame, song_structure: SongStructure) -> Lyrics:

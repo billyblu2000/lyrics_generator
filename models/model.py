@@ -63,3 +63,49 @@ class Model:
              '蝶恋花')
         ]
         return test[random.randint(0,3)][0]
+
+
+class Baseline:
+
+    def __init__(self, config, retriever, connector):
+        """
+
+        :param config:
+        :param retriever:
+        :param connector:
+        """
+        if config.print_log:
+            print('Init Model: Model...')
+        self.config = config
+        self.retriever = retriever
+
+    def init_model(self):
+        retriever = SentenceTransformersRetriever(config)
+
+    def run(self):
+        pass
+
+    def __call__(self, rhythmic: str, title: str):
+        song_structure = self.find_song_structure(rhythmic)
+        sentences = self.retriever(title, song_structure)
+        lyrics = ''
+        for i in song_structure:
+            lyrics = lyrics + random.choice(sentences[i[0]]) + i[1]
+        print(lyrics)
+        return lyrics
+
+    @staticmethod
+    def find_song_structure(rhythmic: str) -> SongStructure:
+        """
+
+        :param rhythmic:
+        """
+        test = [
+            ([(5, '，'), (5, '。'), (7, '，'), (5, '。'), (5, '，'), (5, '。'), (7, '，'), (5, '。')], '卜算子'),
+            ([(6, '，'), (6, '。'), (7, '。'), (6, '。'), (6, '，'), (6, '。'), (7, '。'), (6, '。')], '西江月'),
+            ([(4, '，'), (4, '。'), (7, '。'), (7, '，'), (7, '。'), (4, '，'), (4, '。'), (7, '。'), (7, '，'), (7, '。'), ],
+             '踏莎行'),
+            ([(7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), (7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), ],
+             '蝶恋花')
+        ]
+        return test[random.randint(0, 3)][0]

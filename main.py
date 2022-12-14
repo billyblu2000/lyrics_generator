@@ -1,9 +1,10 @@
 from models.model import Model
 import time
 
+my_model = Model.init_model()
+
 
 def main(rhythmic, title):
-    my_model = Model.init_model()
     for i in range(3):
         s = time.time()
         my_model(rhythmic, title)
@@ -23,4 +24,3 @@ if __name__ == '__main__':
     main(test[0], test[1])
     test = ['', '对酒当歌']
     main(test[0], test[1])
-
