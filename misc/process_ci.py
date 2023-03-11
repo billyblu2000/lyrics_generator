@@ -124,7 +124,8 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
             author_index = get_index(author_frame, author)
             try:
                 paragraphs, punc = extract_paragraphs(ci['paragraphs'])
-                database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], punc, depth=depth)
+                database += add_song(rhy_index, author_index, title, counter, HanLP(paragraphs)['con'], punc,
+                                     depth=depth)
                 counter += 1
             except:
                 print('An error occurred!')
@@ -138,5 +139,28 @@ def main(depth=0, overwrite_ar_index=False, save_path='../data/'):
     author_frame.to_csv(os.path.join(save_path, 'author_index.csv'))
 
 
+def cut_sentence():
+    all_s = []
+    for file in os.listdir('../data/ci'):
+        if 'ci.song' not in file:
+            continue
+        print(f'Processing {file}')
+        data = json.load(open(os.path.join('../data/ci', file), 'r', encoding='utf-8'))
+
+        for ci in tqdm(data):
+            p = ci['paragraphs']
+            for sentence in p:
+                if '、' in sentence:
+                    continue
+                sentence = sentence.rstrip('。')
+                sentence = sentence.split("，")
+                for s in sentence:
+                    all_s.append(s)
+    file = open('../data/all_sentence.json', 'w', encoding='utf-8')
+    json.dump(all_s, file)
+    file.close()
+
+
 if __name__ == '__main__':
-    main()
+    # main()
+    cut_sentence()

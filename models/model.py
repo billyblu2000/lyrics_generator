@@ -1,6 +1,8 @@
 import random
+import time
 from typing import List
 
+from models.baseline_sentence_retriever import BaselineSentenceRetriever
 from models.phrase_connector import PhraseConnector
 from models.sentence_transformer_retriever import SentenceTransformersRetriever
 import config
@@ -45,6 +47,9 @@ class Model:
         song_structure = self.find_song_structure(rhythmic)
         lyrics = self.connector(phrases, song_structure)
         print(lyrics)
+        file = open(f'{title}-{time.time()}.txt', 'w')
+        file.write(lyrics)
+        file.close()
 
     def __call__(self, rhythmic: str, title: str):
         return self.run(rhythmic, title)
@@ -67,7 +72,7 @@ class Model:
 
 class Baseline:
 
-    def __init__(self, config, retriever, connector):
+    def __init__(self, config, retriever):
         """
 
         :param config:
@@ -79,15 +84,17 @@ class Baseline:
         self.config = config
         self.retriever = retriever
 
-    def init_model(self):
-        retriever = SentenceTransformersRetriever(config)
+    @classmethod
+    def init_model(cls):
+        retriever = BaselineSentenceRetriever(config)
+        return Baseline(config, retriever)
 
-    def run(self):
-        pass
+    def run(self, rhythmic: str, title: str):
+        return self(rhythmic, title)
 
     def __call__(self, rhythmic: str, title: str):
         song_structure = self.find_song_structure(rhythmic)
-        sentences = self.retriever(title, song_structure)
+        sentences = self.retriever(title)
         lyrics = ''
         for i in song_structure:
             lyrics = lyrics + random.choice(sentences[i[0]]) + i[1]
@@ -101,11 +108,11 @@ class Baseline:
         :param rhythmic:
         """
         test = [
-            ([(5, '，'), (5, '。'), (7, '，'), (5, '。'), (5, '，'), (5, '。'), (7, '，'), (5, '。')], '卜算子'),
+            # ([(5, '，'), (5, '。'), (7, '，'), (5, '。'), (5, '，'), (5, '。'), (7, '，'), (5, '。')], '卜算子'),
             ([(6, '，'), (6, '。'), (7, '。'), (6, '。'), (6, '，'), (6, '。'), (7, '。'), (6, '。')], '西江月'),
             ([(4, '，'), (4, '。'), (7, '。'), (7, '，'), (7, '。'), (4, '，'), (4, '。'), (7, '。'), (7, '，'), (7, '。'), ],
              '踏莎行'),
-            ([(7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), (7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), ],
-             '蝶恋花')
+            # ([(7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), (7, '。'), (4, '，'), (5, '。'), (7, '，'), (7, '。'), ],
+            #  '蝶恋花')
         ]
-        return test[random.randint(0, 3)][0]
+        return random.choice(test)[0]

@@ -14,6 +14,8 @@ sentence_transformer_path = 'sentence-transformers/distiluse-base-multilingual-c
 npp_model_checkpoint_path = os.path.join(data_folder, 'model_bert_nsp_pretrain_4class.bin')
 # npp_model_checkpoint_path = None
 rhyme_lookup_table = os.path.join(data_folder, 'word_rhyme_con.csv')
+baseline_sentence_database = os.path.join(data_folder, 'all_sentence.json')
+baseline_sentence_embedding = os.path.join(data_folder, 'sentence_embs.npz')
 
 # hyper parameters
 retrieve_num = 300

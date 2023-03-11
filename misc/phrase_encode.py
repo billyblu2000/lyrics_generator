@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
@@ -12,6 +14,14 @@ def encode_phrase_granu(phrases):
     for i in tqdm(range(0, 310000, 10000)):
         embs.append(st.encode(phrase_list[i:min([i + 10000, len(phrase_list)])]))
     np.savez_compressed('phrase_embs', np.concatenate(embs))
+
+
+def encode_sentence(all_sentences):
+    print(all_sentences[:10])
+    embs = []
+    for i in tqdm(range(0, len(all_sentences), 10000)):
+        embs.append(st.encode(all_sentences[i:min([i + 10000, len(all_sentences)])]))
+    np.savez_compressed('sentence_embs', np.concatenate(embs))
 
 
 def encode_sentence_granu(phrases):
@@ -50,6 +60,7 @@ def encode_sentence_granu(phrases):
 
 if __name__ == '__main__':
     st = SentenceTransformer(config.sentence_transformer_path)
-    phrases = pd.read_csv('../data/phrase_database_d0_drop_dup.csv', index_col=0, encoding="utf-8")
-    encode_sentence_granu(phrases)
-
+    # phrases = pd.read_csv('../data/phrase_database_d0_drop_dup.csv', index_col=0, encoding="utf-8")
+    # encode_sentence_granu(phrases)
+    sentences = json.load(open('../data/all_sentence.json', 'r'))
+    encode_sentence(sentences)
